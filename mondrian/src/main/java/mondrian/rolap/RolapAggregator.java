@@ -252,13 +252,40 @@ public abstract class RolapAggregator
                 return false;
             };
         };
+    
+     /**
+     * {@link Aggregator} implementation for performing all aggregation at DB. NOTE:
+     * This aggregator does not use segments that are already loaded (into cache).
+     * It always queries back to DB for doing the required aggregation.
+     * 
+     * Credit to Werner Fragner as comment on MONDRIAN-570
+     */
+    public static final RolapAggregator PassThrough = new RolapAggregator("passthrough", index++, false) {
+        public Aggregator getRollup() {
+            return this;
+        }
+
+        public Object aggregate(final Evaluator evaluator, final TupleList members, final Calc exp) {
+            final Evaluator evaluator2 = evaluator.pushAggregation(members);
+            evaluator2.setNonEmpty(false);
+            return evaluator2.evaluateCurrent();
+        }
+
+        public String getExpression(final String operand) {
+            return operand;
+        }
+
+        public boolean supportsFastAggregates(final Datatype dataType) {
+            return false;
+        }
+    };
 
     /**
      * List of all valid aggregation operators.
      */
     public static final EnumeratedValues<RolapAggregator> enumeration =
         new EnumeratedValues<RolapAggregator>(
-            new RolapAggregator[] {Sum, Count, Min, Max, Avg, DistinctCount});
+            new RolapAggregator[] {Sum, Count, Min, Max, Avg, DistinctCount, PassThrough});
 
     /**
      * This is the base class for implementing aggregators over sum and
